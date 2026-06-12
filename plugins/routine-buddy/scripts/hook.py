@@ -9,6 +9,7 @@
 manage.py 절대경로는 자기 위치(__file__) 기준으로 계산하고, 데이터 폴더의
 cli.json 에도 기록해 둔다(/routine 스킬이 등록 시 읽음).
 """
+import calendar
 import json
 import os
 from datetime import datetime, timedelta
@@ -43,7 +44,31 @@ def fmt_dur(mins):
     mins = int(mins)
     if mins < 60:
         return f"{mins}분"
-    return f"{mins // 60}시간 {mins % 60}분"
+    if mins < 1440:
+        return f"{mins // 60}시간 {mins % 60}분"
+    return f"{mins // 1440}일"
+
+
+def clamp_day(year, month, day):
+    return min(day, calendar.monthrange(year, month)[1])
+
+
+def occurs_today(r, now):
+    """오늘이 이 루틴의 발생일인가?"""
+    t = r.get("type")
+    if t == "daily":
+        return True
+    if t == "weekly":
+        wds = r.get("weekdays")
+        if wds is None and "weekday" in r:  # 구버전 호환
+            wds = [r["weekday"]]
+        return now.weekday() in (wds or [])
+    if t == "monthly":
+        return now.day == clamp_day(now.year, now.month, r.get("day", 1))
+    if t == "yearly":
+        return (now.month == r.get("month", 1)
+                and now.day == clamp_day(now.year, now.month, r.get("day", 1)))
+    return False
 
 
 def main():
@@ -72,8 +97,9 @@ def main():
         snooze = parse(r.get("snooze_until"))
         if snooze and now < snooze:
             continue
+        t = r.get("type")
 
-        if r.get("type") == "recurring":
+        if t == "recurring":
             ah = r.get("active_hours")
             if ah:
                 lo, hi = ah[0], ah[1]
@@ -89,7 +115,8 @@ def main():
                     f"- [{r['id']}] {r['label']}: 마지막으로 한 지 {fmt_dur(elapsed)} 지남 "
                     f"(주기 {interval}분). → 사용자가 했다고 하면 `python3 \"{MANAGE}\" done {r['id']}` 실행."
                 )
-        elif r.get("type") in ("daily", "weekly"):
+
+        elif t in ("daily", "weekly", "monthly", "yearly"):
             at = r.get("at")
             if not at:
                 continue
@@ -97,11 +124,11 @@ def main():
                 hh, mm = map(int, at.split(":"))
             except Exception:
                 continue
-            if r.get("type") == "weekly" and now.weekday() != r.get("weekday"):
-                continue
+            if not occurs_today(r, now):
+                continue  # 오늘은 발생일 아님
             sched = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
             if now < sched:
-                continue  # 아직 예정 시각 전 → 조용
+                continue  # 아직 예정 시각 전
             last = parse(r.get("last_done"))
             if last and last.date() >= now.date():
                 continue  # 오늘 이미 완료
@@ -110,6 +137,7 @@ def main():
                 f"- [{r['id']}] {r['label']} — 오늘 {at} 예정인데 아직 안 했어 "
                 f"({fmt_dur(mins)} 지남). → 사용자가 했다고 하면 `python3 \"{MANAGE}\" done {r['id']}` 실행."
             )
+
         else:  # oneshot
             rf = parse(r.get("remind_from"))
             if rf and now < rf:
@@ -118,7 +146,7 @@ def main():
             if due:
                 mins = (due - now).total_seconds() / 60
                 if mins > 0:
-                    urg = f"{fmt_dur(mins)} 뒤 ({due.strftime('%H:%M')})"
+                    urg = f"{fmt_dur(mins)} 뒤 ({due.strftime('%m/%d %H:%M')})"
                 elif mins > -180:
                     urg = f"⚠️ 지금/방금 시작됨 ({due.strftime('%H:%M')})"
                 else:

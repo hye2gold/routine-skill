@@ -50,32 +50,36 @@ python3 "$MANAGE" add --label "물 마시기" --type recurring --interval 120 --
   사용자가 "자는 시간엔 빼줘" 류로 말하면 그 범위만. 24시간 원하면 옵션 생략.
 - 등록 직후엔 한 주기가 지나야 첫 알림이 뜬다(바로 안 보채도 정상).
 
-### 타입 고르기 (중요)
+### 타입 고르기 (중요) — 6종
 
-| 사용자 표현 | 타입 | 예시 |
+| 사용자 표현 | 타입 | 예시 명령 |
 |---|---|---|
-| "물 2시간마다", "30분마다 ○○" | `recurring` | `--type recurring --interval 120` |
+| "물 2시간마다", "30분마다 ○○" | `recurring` | `--type recurring --interval 120 --active-hours 9-19` |
 | "매일 10:30 ○○", "매일 저녁 6시 ○○" | `daily` | `--type daily --at 10:30` |
-| "매주 월요일 ○○", "매주 금 17:00 ○○" | `weekly` | `--type weekly --weekday 월 --at 09:00` |
-| "내일 4시 미팅" (특정 날짜 1회) | `oneshot` | `--type oneshot --due ...` |
+| "매주 월/수/금 ○○", "매주 금 17:00" | `weekly` | `--type weekly --weekday 월,수,금 --at 10:00` |
+| "매달 25일 ○○", "매월 1일 ○○" | `monthly` | `--type monthly --day 25 --at 09:00` |
+| "매년 3월 5일 ○○", "매년 ○○" | `yearly` | `--type yearly --month 3 --day 5 --at 08:00` |
+| "내일 4시 미팅" (특정 날짜 1회) | `oneshot` | `--type oneshot --due 2026-06-13T16:00 ...` |
 
-## 1-2) 매일/매주 특정 시각 (daily / weekly)
+## 1-2) 시각 고정형 (daily / weekly / monthly / yearly)
 
-"매일 ○시 ○분"처럼 **하루 중 정해진 시각**이면 `daily`:
-
-```bash
-python3 "$MANAGE" add --label "업무일지 쓰기" --type daily --at 18:00
-```
-
-"매주 ○요일 ○시"처럼 **요일 + 시각**이면 `weekly`:
+전부 `--at HH:MM`(24시간제)을 받고, 추가 인자만 다르다:
 
 ```bash
-python3 "$MANAGE" add --label "미팅룸 잡기" --type weekly --weekday 월 --at 09:00
+# 매일 같은 시각
+python3 "$MANAGE" add --label "업무일지" --type daily --at 18:00
+# 매주 요일(복수 가능: 콤마)
+python3 "$MANAGE" add --label "스탠드업" --type weekly --weekday 월,수,금 --at 10:00
+# 매달 며칠
+python3 "$MANAGE" add --label "월급 확인" --type monthly --day 25 --at 09:00
+# 매년 월/일
+python3 "$MANAGE" add --label "기념일" --type yearly --month 3 --day 5 --at 08:00
 ```
 
-- `--at`: 24시간제 `HH:MM` (예 `10:30`, `18:00`). `--weekday`: `월~일` 또는 `mon~sun`.
-- 동작: 그 시각이 지나면 알림 → "했어" 하면 그날치 종료(다음 날/다음 주 다시). 시각 전·완료 후엔 조용.
-- 등록 시 오늘 시각이 이미 지났으면 오늘은 건너뛰고 다음부터.
+- `--weekday`: `월~일` 또는 `mon~sun`, 여러 개는 콤마(`월,수,금`).
+- `--day`: 1~31. 그 달에 없는 날(예: 31)은 **그 달 마지막 날로 자동 보정**.
+- 공통 동작: 발생일의 그 시각이 지나면 알림 → "했어" 하면 그 차례 종료(다음 발생에 다시). 시각 전·완료 후엔 조용.
+- 등록 시 오늘 슬롯이 이미 지났으면 오늘은 건너뛰고 다음부터.
 
 ## 2) 특정날 루틴 등록 — ⚠️ 먼저 질문할 것
 
