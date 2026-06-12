@@ -4,14 +4,14 @@
     "name": "Hyewon Kim"
   },
   "metadata": {
-    "description": "직장인용 루틴 리마인더 — Claude가 매 대화마다 자연스럽게 챙겨주는 비서",
-    "version": "0.3.0"
+    "description": "직장인용 루틴 리마인더 — Claude가 작업 답변과 어우러지게 챙겨주는 비서",
+    "version": "0.3.6"
   },
   "plugins": [
     {
       "name": "routine-buddy",
       "source": "./plugins/routine-buddy",
-      "description": "물 마시기·스트레칭 같은 주기 루틴과 '내일 4시 미팅' 같은 특정날 리마인더를 등록하면, UserPromptSubmit 훅이 모든 세션·매 대화마다 due인 항목을 Claude 답변에 자연스럽게 끼워 알려준다.",
+      "description": "물 마시기·스트레칭 같은 주기 루틴과 '내일 4시 미팅' 같은 특정날 리마인더를 등록하면, UserPromptSubmit 훅이 모든 세션·매 대화마다 due인 항목을 현재 작업 답변과 어우러지게 챙겨준다.",
       "category": "productivity",
       "keywords": ["reminder", "routine", "productivity", "water", "habit", "직장인", "리마인더"]
     }
