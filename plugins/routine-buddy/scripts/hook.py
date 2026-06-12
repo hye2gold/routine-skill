@@ -89,6 +89,27 @@ def main():
                     f"- [{r['id']}] {r['label']}: 마지막으로 한 지 {fmt_dur(elapsed)} 지남 "
                     f"(주기 {interval}분). → 사용자가 했다고 하면 `python3 \"{MANAGE}\" done {r['id']}` 실행."
                 )
+        elif r.get("type") in ("daily", "weekly"):
+            at = r.get("at")
+            if not at:
+                continue
+            try:
+                hh, mm = map(int, at.split(":"))
+            except Exception:
+                continue
+            if r.get("type") == "weekly" and now.weekday() != r.get("weekday"):
+                continue
+            sched = now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+            if now < sched:
+                continue  # 아직 예정 시각 전 → 조용
+            last = parse(r.get("last_done"))
+            if last and last.date() >= now.date():
+                continue  # 오늘 이미 완료
+            mins = (now - sched).total_seconds() / 60
+            lines.append(
+                f"- [{r['id']}] {r['label']} — 오늘 {at} 예정인데 아직 안 했어 "
+                f"({fmt_dur(mins)} 지남). → 사용자가 했다고 하면 `python3 \"{MANAGE}\" done {r['id']}` 실행."
+            )
         else:  # oneshot
             rf = parse(r.get("remind_from"))
             if rf and now < rf:

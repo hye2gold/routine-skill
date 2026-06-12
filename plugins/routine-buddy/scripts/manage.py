@@ -66,6 +66,28 @@ def parse_hours(s):
     return [int(a), int(b)]
 
 
+WEEKDAYS = {"mon": 0, "tue": 1, "wed": 2, "thu": 3, "fri": 4, "sat": 5, "sun": 6,
+            "월": 0, "화": 1, "수": 2, "목": 3, "금": 4, "토": 5, "일": 6,
+            "monday": 0, "tuesday": 1, "wednesday": 2, "thursday": 3,
+            "friday": 4, "saturday": 5, "sunday": 6}
+
+
+def parse_weekday(s):
+    key = s.strip().lower()
+    if key in WEEKDAYS:
+        return WEEKDAYS[key]
+    raise SystemExit(f"요일 파싱 실패 (mon..sun / 월..일): {s}")
+
+
+def already_passed_today(at_str, weekday=None):
+    """오늘 그 시각 슬롯이 이미 지났으면 True → 등록 시 오늘은 건너뛰고 다음부터."""
+    hh, mm = map(int, at_str.split(":"))
+    now = datetime.now()
+    if weekday is not None and now.weekday() != weekday:
+        return True  # 오늘이 그 요일이 아니면 오늘 슬롯 없음
+    return now >= now.replace(hour=hh, minute=mm, second=0, microsecond=0)
+
+
 def find(data, rid):
     for r in data["routines"]:
         if r["id"] == rid:
@@ -85,6 +107,21 @@ def cmd_add(args):
         if args.active_hours:
             r["active_hours"] = parse_hours(args.active_hours)
         r["last_done"] = now_iso()  # 등록 직후엔 한 주기 뒤부터 알림
+    elif args.type == "daily":
+        if not args.at:
+            print("daily 는 --at 'HH:MM' 가 필요합니다", file=sys.stderr)
+            sys.exit(1)
+        r["at"] = args.at
+        if already_passed_today(args.at):
+            r["last_done"] = now_iso()  # 오늘 시각 지났으면 내일부터
+    elif args.type == "weekly":
+        if not args.at or args.weekday is None:
+            print("weekly 는 --at 'HH:MM' 와 --weekday 가 필요합니다", file=sys.stderr)
+            sys.exit(1)
+        r["at"] = args.at
+        r["weekday"] = parse_weekday(args.weekday)
+        if already_passed_today(args.at, r["weekday"]):
+            r["last_done"] = now_iso()
     else:  # oneshot
         if not args.due:
             print("oneshot 은 --due 가 필요합니다", file=sys.stderr)
@@ -103,7 +140,7 @@ def cmd_done(args):
     if not r:
         print(f"없는 id: {args.id}", file=sys.stderr)
         sys.exit(1)
-    if r["type"] == "recurring":
+    if r["type"] in ("recurring", "daily", "weekly"):
         r["last_done"] = now_iso()
         r.pop("snooze_until", None)
         print(f"완료 처리(다음 주기로 리셋): [{r['id']}] {r['label']}")
@@ -144,10 +181,16 @@ def cmd_list(args):
         return
     for r in data["routines"]:
         status = "" if r.get("active", True) else " (비활성)"
-        if r["type"] == "recurring":
+        t = r["type"]
+        if t == "recurring":
             ah = r.get("active_hours")
             ah_s = f", {ah[0]}-{ah[1]}시" if ah else ""
             print(f"[{r['id']}] {r['label']} — 매 {r.get('interval_minutes', 120)}분{ah_s}{status}")
+        elif t == "daily":
+            print(f"[{r['id']}] {r['label']} — 매일 {r.get('at', '?')}{status}")
+        elif t == "weekly":
+            wd = "월화수목금토일"[r.get("weekday", 0)]
+            print(f"[{r['id']}] {r['label']} — 매주 {wd} {r.get('at', '?')}{status}")
         else:
             print(f"[{r['id']}] {r['label']} — {r.get('due_at', '?')} 까지{status}")
 
@@ -158,10 +201,12 @@ def main():
 
     a = sub.add_parser("add")
     a.add_argument("--label", required=True)
-    a.add_argument("--type", choices=["recurring", "oneshot"], required=True)
+    a.add_argument("--type", choices=["recurring", "oneshot", "daily", "weekly"], required=True)
     a.add_argument("--id")
     a.add_argument("--interval", type=int, help="recurring: 분 단위 주기 (기본 120)")
     a.add_argument("--active-hours", help="recurring: 알림 허용 시간대 '9-19'")
+    a.add_argument("--at", help="daily/weekly: 시각 'HH:MM' (예 10:30)")
+    a.add_argument("--weekday", help="weekly: 요일 mon..sun 또는 월..일")
     a.add_argument("--due", help="oneshot: ISO 시각 2026-06-13T16:00")
     a.add_argument("--remind-from", help="oneshot: 이 시각부터 상기 (기본 due와 동일)")
     a.set_defaults(func=cmd_add)
