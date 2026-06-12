@@ -19,7 +19,10 @@ def data_dir():
         d = os.path.abspath(os.path.expanduser(override))
     else:
         d = os.path.join(os.path.expanduser("~"), ".claude", "routine-buddy")
-    os.makedirs(d, exist_ok=True)
+    try:
+        os.makedirs(d, exist_ok=True)
+    except Exception:
+        pass
     return d
 
 
@@ -35,8 +38,11 @@ def load():
 
 
 def save(data):
-    with open(STORE, "w", encoding="utf-8") as f:
+    # atomic write: 임시 파일에 쓰고 교체 → 중간에 죽어도 routines.json 손상 방지
+    tmp = STORE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    os.replace(tmp, STORE)
 
 
 def now_iso():

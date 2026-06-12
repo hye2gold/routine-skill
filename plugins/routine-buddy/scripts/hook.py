@@ -75,8 +75,12 @@ def main():
 
         if r.get("type") == "recurring":
             ah = r.get("active_hours")
-            if ah and not (ah[0] <= now.hour < ah[1]):
-                continue
+            if ah:
+                lo, hi = ah[0], ah[1]
+                # 자정을 넘기는 구간(예: 22-6)도 지원
+                inside = (lo <= now.hour < hi) if lo <= hi else (now.hour >= lo or now.hour < hi)
+                if not inside:
+                    continue
             interval = r.get("interval_minutes", 120)
             last = parse(r.get("last_done")) or (now - timedelta(minutes=interval + 1))
             elapsed = (now - last).total_seconds() / 60
