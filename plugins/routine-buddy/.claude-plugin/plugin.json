@@ -1,0 +1,10 @@
+{
+  "name": "routine-buddy",
+  "version": "0.1.0",
+  "description": "직장인용 루틴 리마인더 비서. 물·스트레칭 같은 주기 루틴과 '내일 4시 미팅' 같은 특정날 알림을 등록하면, Claude가 모든 세션·매 대화마다 자연스럽게 챙겨준다.",
+  "author": {
+    "name": "Hyewon Kim"
+  },
+  "license": "MIT",
+  "keywords": ["reminder", "routine", "productivity", "water", "habit", "리마인더", "직장인"]
+}
