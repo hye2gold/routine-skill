@@ -23,7 +23,7 @@
 ## 설치
 
 ```
-/plugin marketplace add <github-user>/routine-buddy
+/plugin marketplace add hye2gold/routine-skill
 /plugin install routine-buddy@routine-buddy
 ```
 
