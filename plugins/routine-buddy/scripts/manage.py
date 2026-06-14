@@ -170,6 +170,21 @@ def sanitize_custom_tone(text):
     return text[:200]  # 컨텍스트에 raw 주입되므로 길이 상한
 
 
+def tone_config(tone=None, custom=None, fallback=None):
+    if custom:
+        return "custom", sanitize_custom_tone(custom)
+    if tone:
+        return tone, STYLE_PRESETS[tone]
+    fallback = fallback if isinstance(fallback, dict) else {}
+    base_tone = fallback.get("tone")
+    base_instruction = fallback.get("tone_instruction")
+    if base_tone in STYLE_PRESETS and isinstance(base_instruction, str):
+        return base_tone, base_instruction
+    if base_tone == "custom" and isinstance(base_instruction, str):
+        return "custom", base_instruction
+    return "natural", STYLE_PRESETS["natural"]
+
+
 def validate_day(day):
     if day is None or not (1 <= day <= 31):
         raise SystemExit("--day 는 1~31 사이여야 합니다")
@@ -304,6 +319,9 @@ def cmd_add(args):
             sys.exit(1)
         now = datetime.now()
         r = {"id": rid, "label": args.label, "type": args.type, "active": True}
+        tone, instruction = tone_config(args.tone, args.custom_tone, data.get("settings"))
+        r["tone"] = tone
+        r["tone_instruction"] = instruction
 
         if args.type == "recurring":
             r["interval_minutes"] = parse_positive_minutes(args.interval, "--interval") or 120
@@ -350,7 +368,7 @@ def cmd_add(args):
             r["acked"] = False
 
         data["routines"].append(r)
-    print(f"등록됨: [{rid}] {args.label}")
+    print(f"등록됨: [{rid}] {args.label} (말투: {tone})")
 
 
 def cmd_done(args):
@@ -423,23 +441,33 @@ def cmd_list(args):
         return
     for r in data["routines"]:
         status = "" if r.get("active", True) else " (비활성)"
-        print(f"[{r['id']}] {r['label']} — {describe(r)}{status}")
+        tone = r.get("tone") or data.get("settings", {}).get("tone", "natural")
+        print(f"[{r['id']}] {r['label']} — {describe(r)} — 말투:{tone}{status}")
 
 
 def cmd_style(args):
     with locked_store() as data:
+        target = None
+        if args.id:
+            validate_id(args.id)
+            target = find(data, args.id)
+            if not target:
+                print(f"없는 id: {args.id}", file=sys.stderr)
+                sys.exit(1)
         settings = data.setdefault("settings", {})
+        dest = target or settings
         if args.custom:
             text = sanitize_custom_tone(args.custom)
-            settings["tone"] = "custom"
-            settings["tone_instruction"] = text
+            dest["tone"] = "custom"
+            dest["tone_instruction"] = text
             msg = f"말투 설정됨: {text}"
         elif args.tone:
-            settings["tone"] = args.tone
-            settings["tone_instruction"] = STYLE_PRESETS[args.tone]
+            dest["tone"] = args.tone
+            dest["tone_instruction"] = STYLE_PRESETS[args.tone]
             msg = f"말투 설정됨: {args.tone} — {STYLE_PRESETS[args.tone]}"
         else:
-            msg = f"현재 말투: {settings.get('tone', 'natural')} — {settings.get('tone_instruction', STYLE_PRESETS['natural'])}"
+            source = target or settings
+            msg = f"현재 말투: {source.get('tone', 'natural')} — {source.get('tone_instruction', STYLE_PRESETS['natural'])}"
     print(msg)
 
 
@@ -525,6 +553,8 @@ def main():
     a.add_argument("--month", type=int, help="yearly: 월 1-12")
     a.add_argument("--due", help="oneshot: ISO 시각 2026-06-13T16:00")
     a.add_argument("--remind-from", help="oneshot: 이 시각부터 상기 (기본 due와 동일)")
+    a.add_argument("--tone", choices=sorted(STYLE_PRESETS), help="이 루틴 알림에만 적용할 말투")
+    a.add_argument("--custom-tone", help="이 루틴 알림에만 적용할 직접 말투 지시")
     a.set_defaults(func=cmd_add)
 
     d = sub.add_parser("done")
@@ -544,6 +574,7 @@ def main():
     ls.set_defaults(func=cmd_list)
 
     st = sub.add_parser("style")
+    st.add_argument("--id", help="특정 루틴 id의 말투를 확인/변경")
     st.add_argument("--tone", choices=sorted(STYLE_PRESETS))
     st.add_argument("--custom", help="routine-buddy 알림에만 적용할 직접 말투 지시")
     st.set_defaults(func=cmd_style)

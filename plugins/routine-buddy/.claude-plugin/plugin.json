@@ -1,6 +1,6 @@
 {
   "name": "routine-buddy",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "직장인용 루틴 리마인더 비서. 주기(2시간마다)·매일·매주 요일·매달·매년·특정날 등 모든 반복 루틴을 등록하면, Claude가 모든 세션·매 대화마다 현재 작업 답변과 어우러지게 챙겨준다.",
   "author": {
     "name": "Hyewon Kim"

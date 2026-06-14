@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "직장인용 루틴 리마인더 — Claude가 작업 답변과 어우러지게 챙겨주는 비서",
-    "version": "0.3.6"
+    "version": "0.3.7"
   },
   "plugins": [
     {

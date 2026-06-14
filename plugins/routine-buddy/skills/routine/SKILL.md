@@ -90,6 +90,7 @@ routine-buddy는 설치 직후 한 번만 초기 세팅을 진행한다. 훅이 
    - 사용자가 예/아니오로 답할 때까지 계속 묻는다.
 
 온보딩 질문은 매번 같은 문장을 복붙하지 말고 살짝 다르게 말한다. 말투가 설정된 뒤에는 온보딩 질문도 그 말투를 따른다.
+온보딩 말투는 새 루틴 등록 시 기본 추천값으로만 쓴다. 실제 리마인더 말투는 루틴마다 따로 저장한다.
 
 ---
 
@@ -98,13 +99,28 @@ routine-buddy는 설치 직후 한 번만 초기 세팅을 진행한다. 훅이 
 사용자가 "물 2시간마다 알려줘" 처럼 말하면:
 
 ```bash
-python3 "$MANAGE" add --label "물 마시기" --type recurring --interval 120 --active-hours 9-19
+python3 "$MANAGE" add --label "물 마시기" --type recurring --interval 120 --active-hours 9-19 --tone warm
 ```
 
 - `--interval`: 분 단위 (2시간 = 120).
 - `--active-hours`: 알림 허용 시간대. **직장인 기본값은 `9-19`** (근무시간에만 알림).
   사용자가 "자는 시간엔 빼줘" 류로 말하면 그 범위만. 24시간 원하면 옵션 생략.
+- `--tone` / `--custom-tone`: **이 루틴 알림에만 적용되는 말투**. 루틴 등록 때마다 사용자가 어떤 말투로 챙겨주길 원하는지 확인해 함께 저장한다.
 - 등록 직후엔 한 주기가 지나야 첫 알림이 뜬다(바로 안 보채도 정상).
+
+### 루틴별 말투 선택 (등록할 때마다)
+
+새 루틴을 등록할 때는 시간/주기 확인과 함께 "이 루틴은 어떤 말투로 챙겨줄까?"를 짧게 묻는다.
+
+추천 예시:
+
+- 따뜻하게 챙겨주는 말투(귀여운 이모지 포함) → `--tone warm`
+- 조금 쪼아대는 긴급한 말투 → `--tone urgent`
+- 차분하고 담백한 말투 → `--tone calm`
+
+사용자가 "그냥 자연스럽게"라고 하면 `--tone natural`, "장난스럽게"라고 하면 `--tone playful`을 쓴다. 원하는 표현이 프리셋에 없으면 `--custom-tone "사용자가 말한 말투"`로 저장한다.
+
+사용자가 말투를 명시하지 않았고 빨리 등록하길 원하면 온보딩에서 고른 기본 말투를 fallback으로 써도 된다. 그래도 가능하면 새 루틴 등록 확인 문장에 "이 루틴은 따뜻한 말투로 챙겨줄게"처럼 어떤 말투가 저장됐는지 알려준다.
 
 ### 타입 고르기 (중요) — 6종
 
@@ -125,18 +141,18 @@ python3 "$MANAGE" add --label "물 마시기" --type recurring --interval 120 --
 예: "물은 2시간마다, 스트레칭은 매일 오후 4시에 알려줘"
 
 ```bash
-python3 "$MANAGE" add --label "물 마시기" --type recurring --interval 120 --active-hours 9-19
-python3 "$MANAGE" add --label "스트레칭" --type daily --at 16:00
+python3 "$MANAGE" add --label "물 마시기" --type recurring --interval 120 --active-hours 9-19 --tone warm
+python3 "$MANAGE" add --label "스트레칭" --type daily --at 16:00 --tone urgent
 ```
 
-등록 후에는 등록된 항목을 한 번에 요약해서 알려준다. 단, 각각의 루틴에 날짜/시각 모호성이 있으면 등록 전에 필요한 확인 질문을 먼저 한다.
+등록 후에는 등록된 항목과 각 말투를 한 번에 요약해서 알려준다. 단, 각각의 루틴에 날짜/시각/말투 모호성이 있으면 등록 전에 필요한 확인 질문을 먼저 한다.
 
 ## 1-1) 작업 세션 루틴 (session)
 
 사용자가 "Claude Code 켜고 3시간째 되면 스트레칭 알려줘", "클코 계속 쓰고 있으면 3시간마다 한번 스트레칭 물어봐"처럼 말하면 `session` 타입으로 등록한다.
 
 ```bash
-python3 "$MANAGE" add --label "스트레칭" --type session --after 180 --idle-reset 45
+python3 "$MANAGE" add --label "스트레칭" --type session --after 180 --idle-reset 45 --tone warm
 ```
 
 - `--after`: Claude Code 작업 활동이 몇 분째 이어졌을 때 상기할지. 3시간 = 180.
@@ -188,7 +204,7 @@ python3 "$MANAGE" add --label "기념일" --type yearly --month 3 --day 5 --at 0
 - **그날만** → oneshot 으로 등록:
   ```bash
   python3 "$MANAGE" add --label "팀 미팅" --type oneshot \
-    --due 2026-06-13T16:00 --remind-from 2026-06-13T09:00
+    --due 2026-06-13T16:00 --remind-from 2026-06-13T09:00 --tone calm
   ```
   - `--due`: 이벤트 시각. `--remind-from`: 그날 언제부터 상기시킬지.
   - `--remind-from` 을 생략하면 기본값은 due 당일 09:00(단, due가 09:00 이전이면 due 시각)이다.
@@ -200,12 +216,12 @@ python3 "$MANAGE" add --label "기념일" --type yearly --month 3 --day 5 --at 0
 ## 3) 등록 후 안내
 
 등록하면 짧게 확인해 준다. 예:
-> "오케이, 물은 9~19시 사이 2시간마다 챙겨줄게. 내일 4시 미팅은 그날 아침부터 리마인드 ON 🙆"
+> "오케이, 물은 9~19시 사이 2시간마다 따뜻하게 챙겨줄게. 내일 4시 미팅은 차분한 말투로 그날 아침부터 리마인드 ON."
 
 이후엔 due 상태가 되면 **매 답변에서 자동으로** 챙긴다(훅이 컨텍스트를 주입). 스킬을 다시 부를 필요 없음.
 이 반복성은 의도된 제품 경험이다. 사용자가 작업 중이어도, 원래 답변을 먼저 완성한 뒤 자연스럽게 이어서 챙긴다.
 
-일반 루틴 추가 과정에서는 온보딩을 다시 시작하지 않는다. 말투는 설치 직후 온보딩에서 먼저 받고, 이후에는 사용자가 직접 "루틴 알림 말투 바꿔줘"라고 요청했을 때만 다시 설정한다.
+일반 루틴 추가 과정에서는 온보딩을 다시 시작하지 않는다. 대신 말투는 **새 루틴을 등록할 때마다 루틴별로 저장**한다. 이미 등록된 루틴의 말투만 바꾸고 싶으면 `style --id <id>`를 사용한다.
 
 ---
 
@@ -216,7 +232,7 @@ python3 "$MANAGE" add --label "기념일" --type yearly --month 3 --day 5 --at 0
 1. **지금 하던 대화를 끊지 말 것.** 본래 답변을 먼저 충분히 하고, 그 답변의 흐름과 어우러지게 **맨 끝에 한 번** 챙긴다.
    - 좋은 예: "...이 기획서는 문제 정의 다음에 성공 기준을 붙이면 좋아. 아참, 4시 루틴인데 물 한 잔 했어?"
    - 나쁜 예: 답변 첫머리부터 리마인더 / 매 문장 반복 / 알림 티 나는 딱딱한 박스.
-2. **평소 말투로.** 사용자 톤에 맞춰 캐주얼하게. 과장·스팸 금지, 답변당 한 번만.
+2. **각 루틴별 말투로.** 훅 컨텍스트의 "이 루틴 말투"를 우선 따른다. 사용자 톤에 맞춰 캐주얼하게, 과장·스팸 금지, 답변당 한 번만.
 3. **사용자가 응답하면 상태 갱신** (훅 컨텍스트에 적힌 완료명령/미루기명령을 그대로 Bash 실행):
    - "했어 / 응 / 마셨어 / 확인했어" → `done <id>` (주기는 리셋, 특정날은 종료).
    - "이따 / 30분 뒤에 / 나중에" → `snooze <id> <분>`.
@@ -229,7 +245,8 @@ python3 "$MANAGE" add --label "기념일" --type yearly --month 3 --day 5 --at 0
 - 완료/리셋: `python3 "$MANAGE" done <id>`
 - 미루기: `python3 "$MANAGE" snooze <id> <분>`
 - 삭제: `python3 "$MANAGE" remove <id>`
-- 말투 확인/설정: `python3 "$MANAGE" style`
+- 기본 말투 확인/설정: `python3 "$MANAGE" style`
+- 특정 루틴 말투 확인/설정: `python3 "$MANAGE" style --id <id>`
 
 ### 취소 / 삭제 / 잠깐 미루기
 
@@ -241,7 +258,7 @@ python3 "$MANAGE" add --label "기념일" --type yearly --month 3 --day 5 --at 0
 
 ### 루틴 비서 말투 설정
 
-말투 설정은 설치 직후 온보딩에서 먼저 받고, 이후에도 사용자가 "루틴 알림은 따뜻하게 말해줘", "조금 쪼아대는 말투로 알려줘", "차분하게 챙겨줘"처럼 명시적으로 요청하면 다시 바꿀 수 있다. Claude Code 전체 말투를 바꾸는 것이 아니라 **routine-buddy 알림 문장에만 적용되는 전용 말투**로 저장한다.
+말투는 새 루틴을 등록할 때마다 해당 루틴에 저장한다. 온보딩/기본 말투는 fallback일 뿐이고, due 알림에서는 각 루틴의 `tone_instruction`을 우선 사용한다. Claude Code 전체 말투를 바꾸는 것이 아니라 **routine-buddy 알림 문장에만 적용되는 전용 말투**다.
 
 ```bash
 python3 "$MANAGE" style --tone warm
@@ -249,6 +266,8 @@ python3 "$MANAGE" style --tone urgent
 python3 "$MANAGE" style --tone calm
 python3 "$MANAGE" style --tone playful
 python3 "$MANAGE" style --tone natural
+python3 "$MANAGE" style --id 물-마시기 --tone urgent
+python3 "$MANAGE" style --id 스트레칭 --custom "트레이너처럼 짧고 단호하게 말해줘"
 ```
 
 지원 프리셋:
@@ -265,4 +284,4 @@ python3 "$MANAGE" style --tone natural
 python3 "$MANAGE" style --custom "친한 동료처럼 짧게 농담 섞어서 챙겨줘"
 ```
 
-현재 말투를 묻거나 "루틴 말투 뭐야?"라고 하면 `python3 "$MANAGE" style` 로 확인한다.
+현재 기본 말투를 묻거나 "루틴 기본 말투 뭐야?"라고 하면 `python3 "$MANAGE" style` 로 확인한다. 특정 루틴의 말투를 묻거나 바꾸면 `python3 "$MANAGE" style --id <id>`를 사용한다.
